@@ -1,0 +1,19 @@
+name: Sync and merge upstream repository with your current repository 
+description: Syncs and merges your current repository with the upstream repository. Greatly inspired by [actions-registry/github-repo-sync-upstream]. For details see README.md 
+author: Markus Heene 
+
+inputs:
+  upstream_repo:
+    description: URL of gitHub public upstream repo 
+    required: true
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.upstream_repo }}
+
+
+branding:
+  icon: 'git-merge'
+  color: 'blue'

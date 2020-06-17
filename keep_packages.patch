@@ -1,0 +1,18 @@
+diff --git packages/pwa-buildpack/lib/cli/create-project.js packages/pwa-buildpack/lib/cli/create-project.js
+index 2e2c9963..6750b4c1 100644
+--- packages/pwa-buildpack/lib/cli/create-project.js
++++ packages/pwa-buildpack/lib/cli/create-project.js
+@@ -220,11 +220,11 @@ module.exports.handler = async function buildpackCli(argv) {
+     }
+ 
+     if (process.env.DEBUG_PROJECT_CREATION) {
+-        prettyLogger.info('Debug: Removing generated tarballs');
++        prettyLogger.info('Moving generated tarballs');
+         const pkgDir = require('pkg-dir');
+         const monorepoDir = resolve(pkgDir.sync(__dirname), '../../');
+         prettyLogger.info(
+-            execa.shellSync('rm -v packages/*/*.tgz', { cwd: monorepoDir })
++            execa.shellSync('mv packages/*/*.tgz ..', { cwd: monorepoDir })
+                 .stdout
+         );
+     }
