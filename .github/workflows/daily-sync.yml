@@ -9,9 +9,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - run: pwd && ls -al && ls -al .github
-    - name: GitHub Sync to Upstream Repository
-      uses: ./.github/actions/sync-from-upstream
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch  
+    - uses: actions/checkout@v2
       with:
-        upstream_repo: https://github.com/magento/pwa-studio.git
+        fetch-depth: 0
+    - name: Merge upstream
+      run: |
+        git config --global user.name ${{ github.repository_owner }}
+        git config --global user.email ${{ github.repository_owner }}'@users.noreply.github.com'
+        git remote add upstream https://github.com/magento/pwa-studio.git
+        git fetch upstream
+
+        git merge --no-edit upstream/${{ steps.extract_branch.outputs.branch }}
+        git push origin ${{ steps.extract_branch.outputs.branch }}
+
