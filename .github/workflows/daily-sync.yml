@@ -10,7 +10,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - run: pwd && ls -al && ls -al .github
     - name: GitHub Sync to Upstream Repository
-      uses: ../sync-from-upstream
+      uses: ./.github/actions/sync-from-upstream
       with:
         upstream_repo: https://github.com/magento/pwa-studio.git
