@@ -17,7 +17,7 @@ jobs:
       id: week-number
       run: "echo \"::set-output name=week::$(date +%U)\""
     - name: Adjust Package Versions
-      run: .github/workflows/bump-version.sh ${{ steps.week-number.outputs.week }}
+      run: .github/bump-version.sh ${{ steps.week-number.outputs.week }}
     - name: Debug output
       run: git --no-pager diff
     - run: yarn install
