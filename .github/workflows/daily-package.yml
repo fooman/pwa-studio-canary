@@ -17,7 +17,7 @@ jobs:
       id: week-number
       run: "echo \"::set-output name=week::$(date +%U)\""
     - name: Adjust Package Versions
-      run: "find . -name 'package.json' -and -path '*/packages/*' -maxdepth 3 -exec sed -i 's|\(.*\"version\"\): \"\(.*\)\",.*|\1: '\"\\"\2-canary-${{ steps.week-number.outputs.week }}\\"|\"  {} +"
+      run: run .github/workflows/bump-version.sh ${{ steps.week-number.outputs.week }}
     - name: Debug output
       run: git --no-pager diff
     - run: yarn install
