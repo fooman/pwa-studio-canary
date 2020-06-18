@@ -12,7 +12,7 @@ index 2e2c9963..6750b4c1 100644
          const monorepoDir = resolve(pkgDir.sync(__dirname), '../../');
          prettyLogger.info(
 -            execa.shellSync('rm -v packages/*/*.tgz', { cwd: monorepoDir })
-+            execa.shellSync('mv packages/*/*.tgz ..', { cwd: monorepoDir })
++            execa.shellSync('mv packages/*/*.tgz .', { cwd: monorepoDir })
                  .stdout
          );
      }
