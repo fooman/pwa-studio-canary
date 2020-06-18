@@ -1,8 +1,8 @@
 name: Daily Sync
-
-on: 
-  schedule:
-    - cron: "4 20 * * *"
+on: [push]
+#on: 
+#  schedule:
+#    - cron: "4 20 * * *"
 jobs:
   build:
 
@@ -11,6 +11,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: GitHub Sync to Upstream Repository
-      uses: ./.github/actions/sync-from-upstream
+      uses: ../sync-from-upstream
       with:
         upstream_repo: https://github.com/magento/pwa-studio.git
