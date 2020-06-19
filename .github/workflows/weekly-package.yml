@@ -1,8 +1,8 @@
 name: Weekly Package
 on: [push]
-on: 
-  schedule:
-    - cron: "4 20 * * 0"
+#on: 
+#  schedule:
+#    - cron: "4 20 * * 0"
 jobs:
   build:
 
