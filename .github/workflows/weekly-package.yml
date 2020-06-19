@@ -1,8 +1,8 @@
 name: Weekly Package
-on: [push]
-#on: 
-#  schedule:
-#    - cron: "4 20 * * 0"
+#on: [push]
+on: 
+  schedule:
+    - cron: "4 20 * * 0"
 jobs:
   build:
 
@@ -50,5 +50,9 @@ jobs:
         tag_name: fooman-canary-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}
         release_name: Release ${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}
         body: |
-          [Latest package.json](https://canary-packages.fooman.com/pwa-create/package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }})
+          [Latest package.json](https://canary-packages.fooman.com/pwa-create/package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}.json)
         prerelease: true
+    - uses: actions/upload-artifact@v2
+      with:
+        name: package.json
+        path: $GITHUB_WORKSPACE/output/packages/pwa-create/package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}.json
