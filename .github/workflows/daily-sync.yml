@@ -1,8 +1,8 @@
 name: Daily Sync
-on: [push]
-#on: 
-#  schedule:
-#    - cron: "4 20 * * *"
+#on: [push]
+on: 
+  schedule:
+    - cron: "4 20 * * *"
 jobs:
   build:
 
