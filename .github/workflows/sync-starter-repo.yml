@@ -11,8 +11,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       name: Checkout files
-    - run: patch -p 0 < keep_packages.patch
-      name: Patch to keep generated files
     - name: Week Number
       id: week-number
       run: "echo \"::set-output name=week::$(date +%U)\""
