@@ -27,7 +27,7 @@ jobs:
     - name: Retain package.json
       run: sed -i -e "s#file://$GITHUB_WORKSPACE/packages/#https://canary-packages.fooman.com/#g" $GITHUB_WORKSPACE/../tmp-to-delete/package.json
     - name: Git clone
-      run:  git clone --depth 1 https://$API_TOKEN_GITHUB@github.com/fooman/pwa-studio-starter.git $GITHUB_WORKSPACE/../starter/
+      run:  git clone https://$GITHUB_ACTOR:$API_TOKEN_GITHUB@github.com/fooman/pwa-studio-starter.git $GITHUB_WORKSPACE/../starter/
     - name: Update code
       run: |
         cd $GITHUB_WORKSPACE/../starter/
