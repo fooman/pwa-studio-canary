@@ -36,6 +36,8 @@ jobs:
     - name: Push Changes
       run: |
               cd $GITHUB_WORKSPACE/../starter/
+              git config --global user.name ${{ github.repository_owner }}
+              git config --global user.email ${{ github.repository_owner }}'@users.noreply.github.com'
               if [ -n "$(git status --porcelain)" ]; then
                 git add .
                 git commit --message "Updated from upstream"
