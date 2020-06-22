@@ -2,7 +2,7 @@ name: Weekly Package
 #on: [push]
 on: 
   schedule:
-    - cron: "4 20 * * 0"
+    - cron: "4 30 * * 1"
 jobs:
   build:
 
@@ -54,5 +54,5 @@ jobs:
         prerelease: true
     - uses: actions/upload-artifact@v2
       with:
-        name: package.json
-        path: $GITHUB_WORKSPACE/output/packages/pwa-create/package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}.json
+        name: package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}.json
+        path: $GITHUB_WORKSPACE/output/packages/pwa-create/
