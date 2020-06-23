@@ -41,5 +41,5 @@ jobs:
         SOURCE_DIR: $GITHUB_WORKSPACE/output/packages
     - uses: actions/upload-artifact@v2
       with:
-        name: package-$TAG.json
+        name: package-${{ env.TAG }}.json
         path: $GITHUB_WORKSPACE/output/packages/pwa-create/
