@@ -21,7 +21,7 @@ jobs:
       id: year-number
       run: "echo \"::set-output name=year::$(date +%Y)\""
     - name: Grab Tag Name
-      run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+      run: echo ::set-env name=TAG::${GITHUB_REF#refs/*/}
     - name: Adjust Package Versions
       run: .github/bump-version.sh $TAG
     - name: Debug output
