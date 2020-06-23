@@ -12,17 +12,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       name: Checkout files
-    - name: Extract branch name
-      shell: bash
-      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-      id: extract_branch
     - name: Merge upstream
       run: |
         git config --global user.name ${{ github.repository_owner }}
         git config --global user.email ${{ github.repository_owner }}'@users.noreply.github.com'
         git remote add upstream https://github.com/magento/pwa-studio.git
         git fetch upstream
-        git merge --no-edit upstream/${{ steps.extract_branch.outputs.branch }}
+        git merge --no-edit upstream/develop
     - run: patch -p 0 < keep_packages.patch
       name: Patch to keep generated files
     - name: Week Number
