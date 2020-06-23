@@ -1,7 +1,8 @@
 name: Manual Package
 on:
-  tags:
-    - manual-*
+  create:
+    tags:
+      - manual-*
 
 jobs:
   build:
