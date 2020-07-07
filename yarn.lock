@@ -10879,9 +10879,9 @@ lite-ready@^1.0.4:
   integrity sha1-bf5Q9FpaKEDIfIQGp6vzCIv9JV4=
 
 load-google-maps-api@~2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/load-google-maps-api/-/load-google-maps-api-2.0.1.tgz#3af80e2eb8196457b4b88360c092ad9575e35fec"
-  integrity sha512-eQRA90S//j3OFN1WNic9G9ZZKH6Z7J59/mB46S9ByPx0vFJMN5BnvR97IXNzQ2v4p0/tI0TSPV8L71e+G/3jjQ==
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/load-google-maps-api/-/load-google-maps-api-2.0.2.tgz#dd832a08d5ef49cbbe2e83f1c8ac1b2227860d7a"
+  integrity sha512-x/gIurGtJ2Gd34LXhed5tupZnG7P1oc1WpOHkyFpX7NesXkwhCBPyCsindj5BGKuQHrsbwARFWOjJGiAPhoMgg==
 
 load-json-file@^2.0.0:
   version "2.0.0"
