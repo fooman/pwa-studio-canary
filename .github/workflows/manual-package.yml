@@ -52,7 +52,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         SOURCE_DIR: $GITHUB_WORKSPACE/output/packages
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: package-${{ env.TAG }}.json
         path: ${{ github.workspace }}/output/packages/pwa-create/
