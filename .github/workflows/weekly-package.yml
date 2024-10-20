@@ -56,7 +56,7 @@ jobs:
         body: |
           [Latest package.json](https://canary-packages.fooman.com/pwa-create/package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}.json)
         prerelease: true
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: package-${{ steps.year-number.outputs.year }}-${{ steps.week-number.outputs.week }}.json
         path: ${{ github.workspace }}/output/packages/pwa-create/
