@@ -98,6 +98,16 @@ export const useSignIn = props => {
             try {
                 // Get source cart id (guest cart id).
                 const sourceCartId = cartId;
+                let hasSourceItems = false;
+
+                if (sourceCartId !== null) {
+                    const { data: sourceCartData } = await fetchCartDetails({
+                        variables: { cartId: sourceCartId },
+                        fetchPolicy: 'network-only'
+                    });
+
+                    hasSourceItems = sourceCartData?.cart?.items?.length > 0;
+                }
 
                 // Get recaptchaV3 data for login
                 const recaptchaData = await generateReCaptchaData();
@@ -116,6 +126,32 @@ export const useSignIn = props => {
                     ? setToken(token, customerAccessTokenLifetime)
                     : setToken(token));
 
+                // Set cookie for iOS PWA session sharing
+                // This enables authentication to persist when user adds web app to home screen
+                if (
+                    typeof document !== 'undefined' &&
+                    typeof window !== 'undefined'
+                ) {
+                    try {
+                        const maxAge = customerAccessTokenLifetime
+                            ? customerAccessTokenLifetime * 3600
+                            : 3600;
+
+                        const hostname = window.location.hostname;
+
+                        // Set multiple cookie variations for iOS compatibility
+                        // iOS has quirks with SameSite=None on some versions
+                        // Primary: With explicit domain and SameSite=None (iOS 13+)
+                        document.cookie = `customer_token=${token}; path=/; domain=${hostname}; max-age=${maxAge}; secure; samesite=none`;
+
+                        // Fallback: Without SameSite (for older iOS versions)
+                        document.cookie = `customer_token=${token}; path=/; domain=${hostname}; max-age=${maxAge}; secure`;
+                    } catch (error) {
+                        // Silently fail if cookies are blocked
+                        // Authentication will still work via localStorage
+                    }
+                }
+
                 // Clear all cart/customer data from cache and redux.
                 await apolloClient.clearCacheData(apolloClient, 'cart');
                 await apolloClient.clearCacheData(apolloClient, 'customer');
@@ -127,13 +163,29 @@ export const useSignIn = props => {
                 });
                 const destinationCartId = await retrieveCartId();
 
-                // Merge the guest cart into the customer cart.
-                await mergeCarts({
-                    variables: {
-                        destinationCartId,
-                        sourceCartId
-                    }
+                const { data: destCartData } = await fetchCartDetails({
+                    variables: { cartId: destinationCartId },
+                    fetchPolicy: 'network-only'
                 });
+
+                const hasDestinationItems =
+                    destCartData?.cart?.items?.length > 0;
+
+                if (sourceCartId !== null && hasSourceItems) {
+                    console.log('Merging guest cart into customer cart');
+                    // Merge the guest cart into the customer cart.
+                    await mergeCarts({
+                        variables: {
+                            destinationCartId,
+                            sourceCartId
+                        }
+                    });
+                } else if (!hasSourceItems && !hasDestinationItems) {
+                    console.log('Both carts empty → clearing local cart');
+                    // Clear all cart/customer data from cache and redux.
+                    await apolloClient.clearCacheData(apolloClient, 'cart');
+                    await removeCart();
+                }
 
                 // Ensure old stores are updated with any new data.
 
@@ -150,7 +202,9 @@ export const useSignIn = props => {
                     }
                 });
 
-                getCartDetails({ fetchCartId, fetchCartDetails });
+                if (sourceCartId !== null && hasSourceItems) {
+                    getCartDetails({ fetchCartId, fetchCartDetails });
+                }
 
                 if (
                     userOnOrderSuccess &&

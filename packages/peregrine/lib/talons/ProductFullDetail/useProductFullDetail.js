@@ -1,6 +1,6 @@
 import { useCallback, useState, useMemo } from 'react';
 import { useIntl } from 'react-intl';
-import { useMutation, useQuery } from '@apollo/client';
+import { useMutation, useQuery, gql } from '@apollo/client';
 import { useCartContext } from '@magento/peregrine/lib/context/cart';
 import { useUserContext } from '@magento/peregrine/lib/context/user';
 
@@ -13,11 +13,13 @@ import mergeOperations from '../../util/shallowMerge';
 import defaultOperations from './productFullDetail.gql';
 import { useEventingContext } from '../../context/eventing';
 import { getOutOfStockVariants } from '@magento/peregrine/lib/util/getOutOfStockVariants';
+import { createProductVariants } from '@magento/peregrine/lib/util/createProductVariants';
+import { useAwaitQuery } from '@magento/peregrine/lib/hooks/useAwaitQuery';
+import BrowserPersistence from '../../util/simplePersistence';
 
 const INITIAL_OPTION_CODES = new Map();
 const INITIAL_OPTION_SELECTIONS = new Map();
 const OUT_OF_STOCK_CODE = 'OUT_OF_STOCK';
-const IN_STOCK_CODE = 'IN_STOCK';
 
 const deriveOptionCodesFromProduct = product => {
     // If this is a simple product it has no option codes.
@@ -31,7 +33,7 @@ const deriveOptionCodesFromProduct = product => {
         attribute_id,
         attribute_code
     } of product.configurable_options) {
-        initialOptionCodes.set(attribute_id, attribute_code);
+        initialOptionCodes.set(String(attribute_id), attribute_code);
     }
 
     return initialOptionCodes;
@@ -45,7 +47,7 @@ const deriveOptionSelectionsFromProduct = product => {
 
     const initialOptionSelections = new Map();
     for (const { attribute_id } of product.configurable_options) {
-        initialOptionSelections.set(attribute_id, undefined);
+        initialOptionSelections.set(String(attribute_id), undefined);
     }
 
     return initialOptionSelections;
@@ -68,7 +70,12 @@ const getIsMissingOptions = (product, optionSelections) => {
     return numProductSelections < numProductOptions;
 };
 
-const getIsOutOfStock = (product, optionCodes, optionSelections) => {
+const getIsOutOfStock = (
+    product,
+    optionCodes,
+    optionSelections,
+    isOutOfStockProductDisplayed
+) => {
     const { stock_status, variants } = product;
     const isConfigurable = isProductConfigurable(product);
     const optionsSelected =
@@ -76,11 +83,33 @@ const getIsOutOfStock = (product, optionCodes, optionSelections) => {
         0;
 
     if (isConfigurable && optionsSelected) {
-        const item = findMatchingVariant({
+        let item = findMatchingVariant({
             optionCodes,
             optionSelections,
             variants
         });
+
+        const allOptionsSelected = !getIsMissingOptions(
+            product,
+            optionSelections
+        );
+
+        if (
+            allOptionsSelected &&
+            isOutOfStockProductDisplayed === false &&
+            (!item || !item.product?.stock_status)
+        ) {
+            const syntheticVariants = createProductVariants(product);
+            const syntheticItem = findMatchingVariant({
+                optionCodes,
+                optionSelections,
+                variants: syntheticVariants
+            });
+            if (syntheticItem) {
+                item = syntheticItem;
+            }
+        }
+
         const stockStatus = item?.product?.stock_status;
 
         return stockStatus === OUT_OF_STOCK_CODE || !stockStatus;
@@ -92,10 +121,13 @@ const getIsAllOutOfStock = product => {
     const isConfigurable = isProductConfigurable(product);
 
     if (isConfigurable) {
-        const inStockItem = variants.find(item => {
-            return item.product.stock_status === IN_STOCK_CODE;
-        });
-        return !inStockItem;
+        if (!variants || !variants.length) {
+            return true;
+        }
+
+        return variants.every(
+            item => item.product?.stock_status === OUT_OF_STOCK_CODE
+        );
     }
 
     return stock_status === OUT_OF_STOCK_CODE;
@@ -257,14 +289,16 @@ export const useProductFullDetail = props => {
 
     const isSupportedProductType = isSupported(productType);
 
-    const [{ cartId }] = useCartContext();
+    //const [{ cartId }] = useCartContext();
+    const [cartState, cartApi] = useCartContext();
+    const { cartId } = cartState;
     const [{ isSignedIn }] = useUserContext();
     const { formatMessage } = useIntl();
 
     const { data: storeConfigData } = useQuery(
         operations.getWishlistConfigQuery,
         {
-            fetchPolicy: 'cache-and-network'
+            fetchPolicy: 'cache-first'
         }
     );
 
@@ -323,11 +357,6 @@ export const useProductFullDetail = props => {
         [product, optionSelections]
     );
 
-    const isOutOfStock = useMemo(
-        () => getIsOutOfStock(product, optionCodes, optionSelections),
-        [product, optionCodes, optionSelections]
-    );
-
     // Check if display out of stock products option is selected in the Admin Dashboard
     const isOutOfStockProductDisplayed = useMemo(() => {
         let totalVariants = 1;
@@ -340,6 +369,17 @@ export const useProductFullDetail = props => {
             return product.variants.length === totalVariants;
         }
     }, [product]);
+
+    const isOutOfStock = useMemo(
+        () =>
+            getIsOutOfStock(
+                product,
+                optionCodes,
+                optionSelections,
+                isOutOfStockProductDisplayed
+            ),
+        [product, optionCodes, optionSelections, isOutOfStockProductDisplayed]
+    );
 
     const isEverythingOutOfStock = useMemo(() => getIsAllOutOfStock(product), [
         product
@@ -386,7 +426,7 @@ export const useProductFullDetail = props => {
         // For simple items, this will be an empty map.
         const options = product.configurable_options || [];
         for (const { attribute_id, values } of options) {
-            map.set(attribute_id, values);
+            map.set(String(attribute_id), values);
         }
         return map;
     }, [product.configurable_options]);
@@ -396,20 +436,64 @@ export const useProductFullDetail = props => {
     // ["abc", "def"]
     const selectedOptionsArray = useMemo(() => {
         const selectedOptions = [];
+        const options = product.configurable_options || [];
 
-        optionSelections.forEach((value, key) => {
+        for (const { attribute_id } of options) {
+            const key = String(attribute_id);
+            const value = optionSelections.get(key);
+            if (value === undefined || value === null) {
+                continue;
+            }
             const values = attributeIdToValuesMap.get(key);
-
             const selectedValue = values?.find(
-                item => item.value_index === value
+                item => String(item.value_index) === String(value)
             );
-
             if (selectedValue) {
                 selectedOptions.push(selectedValue.uid);
             }
-        });
+        }
         return selectedOptions;
-    }, [attributeIdToValuesMap, optionSelections]);
+    }, [
+        attributeIdToValuesMap,
+        optionSelections,
+        product.configurable_options
+    ]);
+
+    // Cart creation wiring (same approach as useAddToCartButton.js)
+    const CREATE_CART_MUTATION = gql`
+        mutation createCart {
+            cartId: createEmptyCart
+        }
+    `;
+
+    const CART_DETAILS_QUERY = gql`
+        query checkUserIsAuthed($cartId: String!) {
+            cart(cart_id: $cartId) {
+                id
+            }
+        }
+    `;
+
+    const [fetchCartId] = useMutation(CREATE_CART_MUTATION);
+    const fetchCartDetails = useAwaitQuery(CART_DETAILS_QUERY);
+
+    const ensureCartId = useCallback(async () => {
+        let newCartId = cartId;
+        if (!newCartId) {
+            await cartApi.getCartDetails({
+                fetchCartId,
+                fetchCartDetails
+            });
+
+            newCartId = new BrowserPersistence().getItem('cartId');
+            if (!newCartId) {
+                throw new Error('Failed to create a new cart');
+            }
+        }
+        return newCartId;
+    }, [cartId, cartApi, fetchCartId, fetchCartDetails]);
+
+    // Cart Creation ends
 
     const handleAddToCart = useCallback(
         async formValues => {
@@ -435,7 +519,7 @@ export const useProductFullDetail = props => {
 
                 if (isSupportedProductType) {
                     const variables = {
-                        cartId,
+                        cartId, // will be replaced by ensured cart id below
                         parentSku: payload.parentSku,
                         product: payload.item,
                         quantity: payload.quantity,
@@ -470,20 +554,27 @@ export const useProductFullDetail = props => {
                     product: {
                         sku: product.sku,
                         quantity
-                    },
-                    entered_options: [
+                    }
+                };
+
+                if (isProductConfigurable(product)) {
+                    if (selectedOptionsArray.length) {
+                        variables.product.selected_options = selectedOptionsArray;
+                    }
+                } else if (product.uid) {
+                    variables.product.entered_options = [
                         {
                             uid: product.uid,
                             value: product.name
                         }
-                    ]
-                };
-
-                if (selectedOptionsArray.length) {
-                    variables.product.selected_options = selectedOptionsArray;
+                    ];
                 }
 
                 try {
+                    //Ensure cart exists *right before* mutation runs
+                    const ensuredCartId = await ensureCartId();
+                    variables.cartId = ensuredCartId;
+
                     await addProductToCart({ variables });
 
                     const selectedOptionsLabels =
@@ -498,7 +589,7 @@ export const useProductFullDetail = props => {
                     dispatch({
                         type: 'CART_ADD_ITEM',
                         payload: {
-                            cartId,
+                            cartId: ensuredCartId,
                             sku: product.sku,
                             name: product.name,
                             pricing: product.price,
@@ -527,7 +618,8 @@ export const useProductFullDetail = props => {
             product,
             productPrice,
             productType,
-            selectedOptionsArray
+            selectedOptionsArray,
+            ensureCartId
         ]
     );
 
@@ -536,11 +628,11 @@ export const useProductFullDetail = props => {
             // We must create a new Map here so that React knows that the value
             // of optionSelections has changed.
             const nextOptionSelections = new Map([...optionSelections]);
-            nextOptionSelections.set(optionId, selection);
+            nextOptionSelections.set(String(optionId), selection);
             setOptionSelections(nextOptionSelections);
             // Create a new Map to keep track of single selections with key as String
             const nextSingleOptionSelection = new Map();
-            nextSingleOptionSelection.set(optionId, selection);
+            nextSingleOptionSelection.set(String(optionId), selection);
             setSingleOptionSelection(nextSingleOptionSelection);
         },
         [optionSelections]

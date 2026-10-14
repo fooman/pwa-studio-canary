@@ -3,7 +3,6 @@ import ShallowRenderer from 'react-test-renderer/shallow';
 import { useHistory } from 'react-router-dom';
 import { createTestInstance } from '@magento/peregrine';
 import { useAppContext } from '@magento/peregrine/lib/context/app';
-
 import Main from '../../Main';
 import Mask from '../../Mask';
 import Routes from '../../Routes';
@@ -14,6 +13,9 @@ jest.mock('../../Head', () => ({
     HeadProvider: ({ children }) => <div>{children}</div>,
     StoreTitle: () => 'Title'
 }));
+jest.mock('../../RobotsMeta/robotsMeta', () => () => (
+    <div data-testid="robots-meta" />
+));
 jest.mock('../../Main', () => 'Main');
 jest.mock('../../Navigation', () => 'Navigation');
 jest.mock('../../Routes', () => 'Routes');
@@ -88,17 +90,42 @@ jest.mock('@magento/peregrine/lib/util/createErrorRecord', () => ({
     })
 }));
 
-jest.mock('@apollo/client', () => ({
-    useMutation: jest.fn().mockImplementation(() => [
-        jest.fn().mockImplementation(() => {
-            return {
-                data: {
-                    createEmptyCart: 'cartIdFromGraphQL'
-                }
-            };
-        })
-    ])
-}));
+jest.mock('@apollo/client', () => {
+    const actual = jest.requireActual('@apollo/client');
+    return {
+        ...actual,
+        useMutation: jest.fn().mockImplementation(() => [
+            jest.fn().mockImplementation(() => {
+                return {
+                    data: {
+                        createEmptyCart: 'cartIdFromGraphQL'
+                    }
+                };
+            })
+        ])
+    };
+});
+
+jest.mock('@magento/peregrine/lib/context/user', () => {
+    const state = { isSignedIn: false, currentUser: null };
+    const api = {
+        signOut: jest.fn(),
+        getUserDetails: jest.fn()
+    };
+    const useUserContext = jest.fn(() => [state, api]);
+
+    return { useUserContext };
+});
+
+jest.mock(
+    '@magento/peregrine/lib/hooks/useCustomerWishlistSkus/useCustomerWishlistSkus',
+    () => ({
+        useCustomerWishlistSkus: jest.fn(() => ({
+            customerWishlistSkus: [],
+            loading: false
+        }))
+    })
+);
 
 jest.mock('react-router-dom', () => ({
     useHistory: jest.fn()
@@ -149,6 +176,17 @@ beforeEach(() => {
 });
 afterEach(() => {
     globalThis.location = oldWindowLocation;
+});
+
+test('renders RobotsMeta component', () => {
+    const appProps = {
+        markErrorHandled: jest.fn(),
+        unhandledErrors: []
+    };
+
+    const { root } = createTestInstance(<App {...appProps} />);
+
+    expect(root.findByProps({ 'data-testid': 'robots-meta' })).toBeTruthy();
 });
 
 test('renders a full page with onlineIndicator and routes', () => {
